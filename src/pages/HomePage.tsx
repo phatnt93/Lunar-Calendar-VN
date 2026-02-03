@@ -153,10 +153,11 @@ export const HomePage = () => {
           Tháng {solarDate.month() + 1} Năm {solarDate.year()}
         </div>
         <div className="plasmo-flex">
-          <div className="plasmo-flex-1 plasmo-flex plasmo-justify-end plasmo-items-center plasmo-mr-4 plasmo-font-bold text-color-1 solar-date-number">
+          <div className="plasmo-flex-1"></div>
+          <div className="plasmo-flex-1 plasmo-pr-4 plasmo-text-center plasmo-font-bold text-color-1 solar-date-number">
             {solarDate.date()}
           </div>
-          <div className="zodiac-img">
+          <div className="plasmo-flex-1">
             <img src={ZodiacHorse} alt="" className="plasmo-w-full" />
           </div>
         </div>
@@ -184,14 +185,14 @@ export const HomePage = () => {
             <div className="">Tháng {lunarInfo?.lunar.monthCanChi}</div>
             <div className="">Ngày {lunarInfo?.lunar.dayCanChi}</div>
             <div className="">
-              Giờ {lunarInfo?.hour.canChi}
-              <br />({lunarInfo?.hour.type})
+              Giờ {lunarInfo?.hour.canChi}{" "}
+              <span className="font-size-11">({lunarInfo?.hour.type})</span>
             </div>
             <div className="">Tiết {lunarInfo?.solarTerm.name}</div>
           </div>
         </div>
         <div>
-          <span className="plasmo-font-bold">Giờ hoàng đạo: </span>
+          <span className="plasmo-font-bold font-size-11">Giờ hoàng đạo: </span>
           {lunarInfo?.hours
             .filter((hour) => hour.isGood)
             .map((hour) => hour.name + ` (${hour.canChi})`)
@@ -266,9 +267,13 @@ export const HomePage = () => {
                           }}>
                           <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full">
                             <div className="plasmo-text-center">
-                              {dateItem.month != solarDate.month()
-                                ? dateItem.day + `/${dateItem.month + 1}`
-                                : dateItem.day}
+                              {dateItem.month != solarDate.month() ? (
+                                <span className="plasmo-text-gray-300">
+                                  {dateItem.day + `/${dateItem.month + 1}`}
+                                </span>
+                              ) : (
+                                dateItem.day
+                              )}
                             </div>
                             <div className="plasmo-text-right text-color-3 font-size-11 plasmo-pt-1">
                               {dateItem.lunarDay === 1
@@ -302,7 +307,7 @@ export const HomePage = () => {
                 type="text"
                 id="go-fast-solar"
                 className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
-                placeholder="Ngày/Tháng/Năm"
+                placeholder="ngày/tháng/năm"
                 value={goFastSolarInput}
                 onChange={(e) => setGoFastSolarInput(e.target.value)}
               />
@@ -317,7 +322,7 @@ export const HomePage = () => {
                   type="text"
                   id="solar-convert"
                   className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
-                  placeholder="Ngày/Tháng/Năm"
+                  placeholder="ngày/tháng/năm"
                   value={convertSolarInput}
                   onChange={(e) => setConvertSolarInput(e.target.value)}
                 />
@@ -333,7 +338,7 @@ export const HomePage = () => {
                   type="text"
                   id="lunar-convert"
                   className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
-                  placeholder="Ngày/Tháng/Năm"
+                  placeholder="ngày/tháng/năm"
                   value={convertLunarInput}
                   onChange={(e) => setConvertLunarInput(e.target.value)}
                 />

@@ -137,11 +137,11 @@ body {
 
 .input-1 {
   background-color: #d4b48a8c;
-  color: black;
+  color: gray;
 }
 
 .input-1::placeholder {
-  color: black;
+  color: gray;
 }
 
 .solar-date-number {
