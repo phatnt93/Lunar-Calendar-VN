@@ -1,0 +1,5 @@
+[Package]
+pnpm build --zip
+--OR--
+pnpm build
+pnpm package
