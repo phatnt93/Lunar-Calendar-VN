@@ -11,7 +11,11 @@ export const getDatesForCalendar = (year: number, month: number): {day: number, 
     const dates: {day: number, month: number, year: number}[] = [];
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
-    const startDayOfWeek = firstDayOfMonth.getDay(); // 0 (Chủ nhật) - 6 (Thứ bảy)
+    let startDayOfWeek = firstDayOfMonth.getDay(); // 0 (Chủ nhật) - 6 (Thứ bảy)
+    
+    // Chuyển đổi để Thứ 2 là ngày đầu tuần (0 = Thứ 2, 6 = Chủ nhật)
+    startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+    
     const daysInMonth = lastDayOfMonth.getDate();
     // Ngày từ tháng trước
     const prevMonthLastDay = new Date(year, month, 0).getDate();
