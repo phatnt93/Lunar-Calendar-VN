@@ -1,7 +1,7 @@
 {
   "name": "lunar-calendar-vn",
   "displayName": "Lịch Vạn Niên - VN",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Lịch Vạn Niên - VN",
   "author": "thanhphat.uit@gmail.com",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@plasmohq/storage": "^1.15.0",
     "dayjs": "^1.11.19",
     "plasmo": "0.90.5",
     "react": "18.2.0",
@@ -26,5 +27,17 @@
     "postcss": "8.4.33",
     "prettier": "3.2.4",
     "typescript": "5.3.3"
+  },
+  "manifest": {
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt7HS0vvD2HE8fwkke3QtfY8mLzfyArNaUIJJUVSkUeIAIpRuN7Vi2fY7COofSn9KJ/TQvNeD6qX7MCyPOdtsNENypJb55f1PZj2t5oHvbjcnCTCIP90Xo4HN2fs+sz9Hj1hnF3M2sDd1kmRLn4XK7MFUo07q3ciLy71W85f9NHcAf/EH42/xVB8CVLcL669d7NG1GEhdd4e6cSslgPRoQPwjf5KJ2P7yoxwLL+yKIIpq+5B6bDIvbzcp1bsN3UKJowTQqGI6gJM2Lmq1eLxBr3QTvQ8+HQxr4xBeDrRMA+Vj1rbusZaGUeGDJgrQKDp9yG9t1wMBNziXaCXvtGkHWwIDAQAB",
+    "permissions": [
+      "identity"
+    ],
+    "oauth2": {
+      "client_id": "449110841499-bdh9dsv2v2qa1igrb3rmkqs9e72dmeel.apps.googleusercontent.com",
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar.readonly"
+      ]
+    }
   }
 }

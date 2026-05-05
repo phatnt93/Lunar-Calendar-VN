@@ -4,15 +4,19 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from "@heroicons/react/24/solid"
+import { useStorage } from "@plasmohq/storage/hook"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 
 import { getDailyQuote, type DailyQuotationType } from "~utils/dailyQuotations"
+import { authenticate } from "~utils/googleAuth"
+import { fetchEvents, type CalendarEvent } from "~utils/googleCalendar"
 import { dateFromString, getDatesForCalendar } from "~utils/helper"
 import LunarCalendar, { type FullInfoType } from "~utils/LunarCalendar"
 import { ZodiacHorse } from "~utils/ZodiacImages"
 
 export const HomePage = () => {
+  const [quoteLang] = useStorage("quoteLang", "vn")
   const [solarDate, setSolarDate] = useState(dayjs())
   const [lunarInfo, setLunarInfo] = useState<FullInfoType | null>(null)
   const [datesCalendar, setDatesCalendar] = useState<
@@ -32,6 +36,9 @@ export const HomePage = () => {
   const [convertLunarOutput, setConvertLunarOutput] = useState<string>("")
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false)
   const [goFastSolarInput, setGoFastSolarInput] = useState<string>("")
+  const [goFastSolarError, setGoFastSolarError] = useState<string>("")
+  const [convertSolarError, setConvertSolarError] = useState<string>("")
+  const [convertLunarError, setConvertLunarError] = useState<string>("")
   const isToday = (day: number, month: number, year: number) => {
     const dateNow = dayjs()
     return (
@@ -107,15 +114,25 @@ export const HomePage = () => {
   }, [solarDate])
 
   useEffect(() => {
+    if (!goFastSolarInput) {
+      setGoFastSolarError("")
+      return
+    }
     const parsedDate = dateFromString(goFastSolarInput)
     if (parsedDate.isValid()) {
       setSolarDate(parsedDate)
+      setGoFastSolarError("")
     } else {
-      // Invalid date input; do nothing or show error if needed
+      setGoFastSolarError("Sai định dạng (VD: 20/11/2023)")
     }
   }, [goFastSolarInput])
 
   useEffect(() => {
+    if (!convertSolarInput) {
+      setConvertSolarOutput("")
+      setConvertSolarError("")
+      return
+    }
     const convertSolarDate = dateFromString(convertSolarInput)
     if (convertSolarDate.isValid()) {
       const lunar = LunarCalendar.convertSolar2Lunar(
@@ -126,12 +143,19 @@ export const HomePage = () => {
       setConvertSolarOutput(
         `Âm lịch: ${lunar.day}/${lunar.month}/${lunar.year}`
       )
+      setConvertSolarError("")
     } else {
       setConvertSolarOutput("")
+      setConvertSolarError("Sai định dạng (VD: 20/11/2023)")
     }
   }, [convertSolarInput])
 
   useEffect(() => {
+    if (!convertLunarInput) {
+      setConvertLunarOutput("")
+      setConvertLunarError("")
+      return
+    }
     const convertLunarDate = dateFromString(convertLunarInput)
     if (convertLunarDate.isValid()) {
       const solar = LunarCalendar.convertLunar2Solar(
@@ -139,13 +163,60 @@ export const HomePage = () => {
         convertLunarDate.get("month") + 1,
         convertLunarDate.get("year")
       )
-      setConvertLunarOutput(
-        `Dương lịch: ${solar.day}/${solar.month}/${solar.year}`
-      )
+      if (solar) {
+        setConvertLunarOutput(
+          `Dương lịch: ${solar.day}/${solar.month}/${solar.year}`
+        )
+        setConvertLunarError("")
+      } else {
+        setConvertLunarOutput("")
+        setConvertLunarError("Ngày âm lịch không hợp lệ")
+      }
     } else {
       setConvertLunarOutput("")
+      setConvertLunarError("Sai định dạng (VD: 20/11/2023)")
     }
   }, [convertLunarInput])
+
+  const [currentMonthEvents, setCurrentMonthEvents] = useState<CalendarEvent[]>([])
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    authenticate(false).then((t) => {
+      if (t) setToken(t);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setCurrentMonthEvents([]);
+      return;
+    }
+    const fetchMonthEvents = async () => {
+      // Fetch events from the start of the currently viewed month to the end
+      const startOfMonth = dayjs(new Date(solarDate.year(), solarDate.month(), 1)).toISOString();
+      const endOfMonth = dayjs(new Date(solarDate.year(), solarDate.month() + 1, 0)).endOf('day').toISOString();
+      
+      const events = await fetchEvents(token, startOfMonth, endOfMonth);
+      setCurrentMonthEvents(events);
+    };
+    fetchMonthEvents();
+  }, [solarDate.month(), solarDate.year(), token])
+
+  const handleLogin = async () => {
+    const t = await authenticate(true);
+    if (t) setToken(t);
+  }
+
+  const getEventsForDate = (d: number, m: number, y: number) => {
+    const targetDateStr = dayjs(new Date(y, m, d)).format("YYYY-MM-DD");
+    return currentMonthEvents.filter(event => {
+       const startStr = event.start.dateTime || event.start.date;
+       if (!startStr) return false;
+       return startStr.startsWith(targetDateStr);
+    });
+  }
+
   return (
     <div className="plasmo-flex plasmo-flex-row plasmo-gap-4 plasmo-p-4">
       <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-2 plasmo-p-4">
@@ -163,7 +234,7 @@ export const HomePage = () => {
         </div>
         <div>
           <div className="plasmo-text-center plasmo-mb-1 plasmo-italic">
-            {dailyQuote?.content_vn}
+            {quoteLang === "en" ? dailyQuote?.content_en : quoteLang === "cn" ? dailyQuote?.content_cn : dailyQuote?.content_vn}
           </div>
           <div className="plasmo-text-right plasmo-font-light">
             <span>-&#9884;- </span>
@@ -197,6 +268,37 @@ export const HomePage = () => {
             .filter((hour) => hour.isGood)
             .map((hour) => hour.name + ` (${hour.canChi})`)
             .join(", ")}
+        </div>
+        
+        <div className="plasmo-mt-4 plasmo-border-t border-color-1 plasmo-pt-4">
+          <div className="plasmo-flex plasmo-justify-between plasmo-items-center plasmo-mb-2">
+            <div className="plasmo-font-bold text-color-2">Sự kiện trong ngày</div>
+            {!token && (
+              <button 
+                onClick={handleLogin} 
+                className="plasmo-text-xs plasmo-bg-blue-500 plasmo-text-white plasmo-px-2 plasmo-py-1 plasmo-rounded hover:plasmo-bg-blue-600 plasmo-transition-colors">
+                Kết nối Google
+              </button>
+            )}
+          </div>
+          <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
+            {getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
+               getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map(ev => {
+                  let timeStr = "Cả ngày";
+                  if (ev.start.dateTime && ev.end.dateTime) {
+                     timeStr = `${dayjs(ev.start.dateTime).format('HH:mm')} - ${dayjs(ev.end.dateTime).format('HH:mm')}`;
+                  }
+                  return (
+                    <div key={ev.id} className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-border-l-4 plasmo-border-blue-500">
+                      <div className="plasmo-text-xs plasmo-text-gray-500">{timeStr}</div>
+                      <div className="plasmo-text-sm plasmo-font-semibold plasmo-truncate text-color-1" title={ev.summary}>{ev.summary}</div>
+                    </div>
+                  )
+               })
+            ) : (
+               <div className="plasmo-text-sm plasmo-italic text-color-3">Không có sự kiện nào.</div>
+            )}
+          </div>
         </div>
       </div>
       <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-4">
@@ -265,7 +367,7 @@ export const HomePage = () => {
                               dateItem.year
                             )
                           }}>
-                          <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full">
+                          <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full plasmo-relative">
                             <div className="plasmo-text-center">
                               {dateItem.month != solarDate.month() ? (
                                 <span className="plasmo-text-gray-300">
@@ -275,10 +377,17 @@ export const HomePage = () => {
                                 dateItem.day
                               )}
                             </div>
-                            <div className="plasmo-text-right text-color-3 font-size-11 plasmo-pt-1">
-                              {dateItem.lunarDay === 1
-                                ? dateItem.lunarDay + "/" + dateItem.lunarMonth
-                                : dateItem.lunarDay}
+                            <div className="plasmo-flex plasmo-justify-between plasmo-items-end">
+                                <div className="plasmo-flex plasmo-gap-1 plasmo-pl-1 plasmo-pb-0.5">
+                                    {getEventsForDate(dateItem.day, dateItem.month, dateItem.year).length > 0 && (
+                                        <div className="plasmo-w-1.5 plasmo-h-1.5 plasmo-rounded-full plasmo-bg-blue-500"></div>
+                                    )}
+                                </div>
+                                <div className="plasmo-text-right text-color-3 font-size-11 plasmo-pt-1">
+                                  {dateItem.lunarDay === 1
+                                    ? dateItem.lunarDay + "/" + dateItem.lunarMonth
+                                    : dateItem.lunarDay}
+                                </div>
                             </div>
                           </div>
                         </td>
@@ -311,6 +420,11 @@ export const HomePage = () => {
                 value={goFastSolarInput}
                 onChange={(e) => setGoFastSolarInput(e.target.value)}
               />
+              {goFastSolarError && (
+                <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
+                  {goFastSolarError}
+                </div>
+              )}
             </div>
             <div className="plasmo-font-bold">Tra cứu ngày Âm - Dương</div>
             <div className="plasmo-flex plasmo-gap-4">
@@ -326,9 +440,15 @@ export const HomePage = () => {
                   value={convertSolarInput}
                   onChange={(e) => setConvertSolarInput(e.target.value)}
                 />
-                <div className="plasmo-text-red-600 plasmo-font-bold plasmo-mt-2">
-                  {convertSolarOutput}
-                </div>
+                {convertSolarError ? (
+                  <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
+                    {convertSolarError}
+                  </div>
+                ) : (
+                  <div className="plasmo-text-red-600 plasmo-font-bold plasmo-mt-2">
+                    {convertSolarOutput}
+                  </div>
+                )}
               </div>
               <div className="plasmo-flex-1 plasmo-flex plasmo-flex-col">
                 <label htmlFor="lunar-convert" className="plasmo-font-medium">
@@ -342,9 +462,15 @@ export const HomePage = () => {
                   value={convertLunarInput}
                   onChange={(e) => setConvertLunarInput(e.target.value)}
                 />
-                <div className="plasmo-text-green-600 plasmo-font-bold plasmo-mt-2">
-                  {convertLunarOutput}
-                </div>
+                {convertLunarError ? (
+                  <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
+                    {convertLunarError}
+                  </div>
+                ) : (
+                  <div className="plasmo-text-green-600 plasmo-font-bold plasmo-mt-2">
+                    {convertLunarOutput}
+                  </div>
+                )}
               </div>
             </div>
           </div>
