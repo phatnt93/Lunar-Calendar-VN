@@ -1,5 +1,7 @@
 import dayjs from "dayjs"
 import type { PersonalEvent } from "~types/personalEvent"
+import { authenticate } from "./googleAuth"
+import { performSync } from "./googleDriveSync"
 
 const STORAGE_KEY = "personal_events"
 
@@ -13,10 +15,24 @@ export const getAllEvents = (): Promise<PersonalEvent[]> => {
 }
 
 /** Lưu toàn bộ danh sách (ghi đè) */
-const saveAllEvents = (events: PersonalEvent[]): Promise<void> => {
+export const saveAllEvents = (events: PersonalEvent[]): Promise<void> => {
   return new Promise((resolve) => {
     chrome.storage.local.set({ [STORAGE_KEY]: events }, resolve)
   })
+}
+
+/** Tự động đồng bộ lên cloud nếu có token */
+export const triggerCloudSync = async () => {
+  const token = await authenticate(false)
+  if (!token) return
+
+  try {
+    const events = await getAllEvents()
+    const merged = await performSync(token, events)
+    await saveAllEvents(merged)
+  } catch (error) {
+    console.error("Auto sync failed:", error)
+  }
 }
 
 /** Thêm sự kiện mới */
@@ -24,6 +40,7 @@ export const addEvent = async (event: PersonalEvent): Promise<void> => {
   const events = await getAllEvents()
   events.push(event)
   await saveAllEvents(events)
+  await triggerCloudSync()
 }
 
 /** Cập nhật sự kiện theo id */
@@ -36,6 +53,7 @@ export const updateEvent = async (
   if (idx !== -1) {
     events[idx] = { ...events[idx], ...data, updatedAt: new Date().toISOString() }
     await saveAllEvents(events)
+    await triggerCloudSync()
   }
 }
 
@@ -43,6 +61,7 @@ export const updateEvent = async (
 export const deleteEvent = async (id: string): Promise<void> => {
   const events = await getAllEvents()
   await saveAllEvents(events.filter((e) => e.id !== id))
+  await triggerCloudSync()
 }
 
 /**

@@ -15,9 +15,10 @@ import { getDailyQuote, type DailyQuotationType } from "~utils/dailyQuotations"
 import { authenticate } from "~utils/googleAuth"
 import { fetchEvents, type CalendarEvent } from "~utils/googleCalendar"
 import { dateFromString, getDatesForCalendar } from "~utils/helper"
+import { type CountdownItem, getUpcomingEvents } from "~utils/countdown"
 import LunarCalendar, { type FullInfoType } from "~utils/LunarCalendar"
 import { isEventOnSolarDate } from "~utils/lunarEventResolver"
-import { getAllEvents } from "~utils/personalEvents"
+import { getAllEvents, triggerCloudSync } from "~utils/personalEvents"
 import { ZodiacHorse } from "~utils/ZodiacImages"
 
 export const HomePage = () => {
@@ -46,6 +47,7 @@ export const HomePage = () => {
   const [convertLunarError, setConvertLunarError] = useState<string>("")
   const [personalEvents, setPersonalEvents] = useState<PersonalEvent[]>([])
   const [userCategories, setUserCategories] = useState<UserCategory[]>([])
+  const [upcomingEvents, setUpcomingEvents] = useState<CountdownItem[]>([])
   const [showEventModal, setShowEventModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<PersonalEvent | null>(null)
   const isToday = (day: number, month: number, year: number) => {
@@ -192,10 +194,16 @@ export const HomePage = () => {
     const cats = await getCategories()
     setPersonalEvents(events)
     setUserCategories(cats)
+    
+    const upcoming = await getUpcomingEvents(events, 4)
+    setUpcomingEvents(upcoming)
   }
 
   useEffect(() => {
     reloadPersonalEvents()
+    triggerCloudSync().then(() => {
+      reloadPersonalEvents()
+    })
   }, [])
 
   const getPersonalEventsForDate = (d: number, m: number, y: number): PersonalEvent[] => {
@@ -243,8 +251,8 @@ export const HomePage = () => {
 
   return (
     <>
-      <div className="plasmo-flex plasmo-flex-row plasmo-gap-4 plasmo-p-4">
-        <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-2 plasmo-p-4">
+      <div className="plasmo-flex plasmo-flex-row plasmo-gap-4 plasmo-p-4 animate-fade-in">
+        <div key={solarDate.toISOString()} className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-2 plasmo-p-4 animate-slide-in">
           <div className="plasmo-text-sm plasmo-font-bold plasmo-text-center">
             Tháng {solarDate.month() + 1} Năm {solarDate.year()}
           </div>
@@ -308,13 +316,16 @@ export const HomePage = () => {
             </div>
             <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
               {getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
-                getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map(ev => {
+                getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map((ev, idx) => {
                   let timeStr = "Cả ngày";
                   if (ev.start.dateTime && ev.end.dateTime) {
                     timeStr = `${dayjs(ev.start.dateTime).format('HH:mm')} - ${dayjs(ev.end.dateTime).format('HH:mm')}`;
                   }
                   return (
-                    <div key={ev.id} className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-border-l-4 plasmo-border-blue-500">
+                    <div 
+                      key={ev.id} 
+                      className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-border-l-4 plasmo-border-blue-500 stagger-item hover-lift"
+                      style={{ "--stagger-index": idx } as React.CSSProperties}>
                       <div className="plasmo-text-xs plasmo-text-gray-500">{timeStr}</div>
                       <div className="plasmo-text-sm plasmo-font-semibold plasmo-truncate text-color-1" title={ev.summary}>{ev.summary}</div>
                     </div>
@@ -338,14 +349,14 @@ export const HomePage = () => {
             </div>
             <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
               {getPersonalEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
-                getPersonalEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map((ev) => {
+                getPersonalEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map((ev, idx) => {
                   const cat = userCategories.find(c => c.id === ev.category) || userCategories[0];
                   return (
                     <div
                       key={ev.id}
                       onClick={() => { setEditingEvent(ev); setShowEventModal(true) }}
-                      className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-cursor-pointer hover:plasmo-shadow-md plasmo-transition-shadow"
-                      style={{ borderLeft: `4px solid ${cat?.color || '#f97316'}` }}>
+                      className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-cursor-pointer stagger-item hover-lift"
+                      style={{ borderLeft: `4px solid ${cat?.color || '#f97316'}`, "--stagger-index": idx } as React.CSSProperties}>
                       <div className="plasmo-text-xs plasmo-text-gray-500">
                         {cat?.label || 'Chưa phân loại'}
                         {ev.repeatType !== 'none' && <span className="plasmo-ml-1">🔁</span>}
@@ -359,6 +370,40 @@ export const HomePage = () => {
                 })
               ) : (
                 <div className="plasmo-text-sm plasmo-italic text-color-3">Chưa có ghi chú nào.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Sắp tới */}
+          <div className="plasmo-mt-4 plasmo-border-t border-color-1 plasmo-pt-4">
+            <div className="plasmo-font-bold text-color-2 plasmo-mb-2">Sắp tới</div>
+            <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
+              {upcomingEvents.length > 0 ? (
+                upcomingEvents.map((item, idx) => (
+                  <div 
+                    key={`${item.name}-${idx}`} 
+                    className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-flex plasmo-justify-between plasmo-items-center stagger-item hover-lift"
+                    style={{ "--stagger-index": idx } as React.CSSProperties}>
+                    <div className="plasmo-flex-1 plasmo-min-w-0">
+                      <div className="plasmo-text-sm plasmo-font-semibold plasmo-truncate text-color-1">
+                        {item.isLunar && <span className="plasmo-mr-1">🌙</span>}
+                        {item.name}
+                      </div>
+                      <div className="plasmo-text-xs plasmo-text-gray-500">
+                        {dayjs(item.date).format("DD/MM")}
+                      </div>
+                    </div>
+                    <div className="plasmo-text-right">
+                      {item.daysLeft === 0 ? (
+                        <span className="plasmo-text-xs plasmo-bg-red-100 plasmo-text-red-600 plasmo-px-2 plasmo-py-0.5 plasmo-rounded-full plasmo-font-bold">Hôm nay</span>
+                      ) : (
+                        <span className="plasmo-text-xs plasmo-bg-blue-100 plasmo-text-blue-600 plasmo-px-2 plasmo-py-0.5 plasmo-rounded-full">Còn {item.daysLeft} ngày</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="plasmo-text-sm plasmo-italic text-color-3">Không có sự kiện sắp tới.</div>
               )}
             </div>
           </div>
@@ -416,12 +461,12 @@ export const HomePage = () => {
                         .map((dateItem, index) => (
                           <td
                             key={index}
-                            className={getClassForDateCell(
+                            className={`${getClassForDateCell(
                               dateItem.day,
                               dateItem.month,
                               dateItem.year,
                               index
-                            )}
+                            )} calendar-cell`}
                             onClick={() => {
                               onClickDate(
                                 dateItem.day,
@@ -429,6 +474,22 @@ export const HomePage = () => {
                                 dateItem.year
                               )
                             }}>
+                            {/* Tooltip hiển thị nhanh sự kiện */}
+                            {(getEventsForDate(dateItem.day, dateItem.month, dateItem.year).length > 0 || 
+                              getPersonalEventsForDate(dateItem.day, dateItem.month, dateItem.year).length > 0) && (
+                              <div className="calendar-tooltip">
+                                <div className="plasmo-font-bold plasmo-mb-1 plasmo-border-b plasmo-border-gray-600">Sự kiện:</div>
+                                <div className="plasmo-space-y-1">
+                                  {getEventsForDate(dateItem.day, dateItem.month, dateItem.year).map(ev => (
+                                    <div key={ev.id} className="plasmo-truncate plasmo-text-blue-300">• {ev.summary}</div>
+                                  ))}
+                                  {getPersonalEventsForDate(dateItem.day, dateItem.month, dateItem.year).map(ev => (
+                                    <div key={ev.id} className="plasmo-truncate plasmo-text-orange-300">• {ev.title}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full plasmo-relative">
                               <div className="plasmo-text-center">
                                 {dateItem.month != solarDate.month() ? (
