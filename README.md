@@ -1,33 +1,44 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# Lịch Vạn Niên - VN
 
-## Getting Started
+![Lịch Vạn Niên Logo](assets/icon.png)
 
-First, run the development server:
+Tiện ích mở rộng cho trình duyệt Chrome giúp xem lịch âm, ngày hoàng đạo, tiết khí và đồng bộ lịch Google.
 
+🔗 **Xem trang giới thiệu:** [https://phatnt93.github.io/Lunar-Calendar-VN/](https://phatnt93.github.io/Lunar-Calendar-VN/)
+
+## Tính năng nổi bật
+
+- **Xem lịch tháng:** Giao diện lịch tháng đầy đủ với ngày dương và ngày âm.
+- **Chi tiết ngày:** Xem Can Chi, Tiết Khí, Giờ Hoàng Đạo và danh ngôn mỗi ngày.
+- **Đồng bộ Google Calendar:** Hiển thị sự kiện cá nhân ngay trên lịch.
+- **Chuyển đổi ngày:** Công cụ chuyển đổi nhanh giữa âm lịch và dương lịch.
+- **Mini Widget:** Widget nổi trên trang web để xem nhanh ngày tháng.
+
+## Cài đặt
+
+Hiện tại bạn có thể cài đặt bằng cách tải mã nguồn và load extension thủ công:
+
+1. Clone repository này.
+2. Chạy `pnpm install`.
+3. Chạy `pnpm dev`.
+4. Mở Chrome, vào `chrome://extensions/`.
+5. Bật "Developer mode".
+6. Chọn "Load unpacked" và trỏ tới thư mục `build/chrome-mv3-dev`.
+
+## Phát triển
+
+Dự án sử dụng [Plasmo framework](https://docs.plasmo.com/).
+
+### Chạy development:
 ```bash
 pnpm dev
-# or
-npm run dev
 ```
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
-
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
-
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
-
+### Build bản production:
 ```bash
 pnpm build
-# or
-npm run build
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+## Giấy phép
 
-## Submit to the webstores
-
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+Mã nguồn được phát hành dưới giấy phép MIT. Xem file [LICENSE](LICENSE) để biết thêm chi tiết.

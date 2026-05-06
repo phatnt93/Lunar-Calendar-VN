@@ -21,3 +21,9 @@
 - **Decision**: Implemented a mandatory process to pin the Extension ID in local development by downloading the Public Key from the Chrome Web Store Developer Dashboard and placing it directly into the `"key"` field of `package.json`'s `manifest` block.
 - **Risk**: Google Calendar API requests are subject to quotas. Polling too frequently could exhaust user quotas.
 - **Decision**: `HomePage.tsx` fetches events on a per-month basis and caches them in local state instead of fetching on every date click.
+- **Decision**: To ensure the local development Extension ID matches the production Web Store ID, the **official Public Key from the Chrome Web Store Dashboard** must be pasted into the `"key"` field of the manifest in `package.json`. This is critical for OAuth consistency.
+
+## 6. App Verification & Publishing
+- **Risk**: Google Calendar API is a "restricted scope". The app will show a "Google hasn't verified this app" warning until verification is complete.
+- **Decision**: The app must be "Published" in the Google Cloud Console (Testing -> In Production) to allow users outside the "Test users" list to log in (even with the warning). Full verification requires a video demo and a public Privacy Policy URL.
+- **Decision**: When updating the extension on the Chrome Web Store, the version number in `package.json` must be manually incremented (e.g., from `0.0.4` to `0.0.5`).

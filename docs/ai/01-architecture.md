@@ -6,18 +6,23 @@
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS, Vanilla CSS (`style.css` with Montserrat fonts)
 - **Date Manipulation**: `dayjs`
+- **Storage**: `@plasmohq/storage` (used for cross-page settings sync)
+- **Identity**: `chrome.identity` (used for Google Calendar OAuth)
 
 ## 2. Directory Structure
 - `src/`
   - `popup.tsx`: The entry point for the extension's popup UI.
   - `content.tsx`: Content script logic. It injects and scopes Tailwind CSS into the Shadow DOM.
+  - `options.tsx`: Options page UI for user settings (e.g., quote language).
   - `pages/`
     - `HomePage.tsx`: The main component containing the calendar UI, state management, and interaction logic.
   - `utils/`
-    - `LunarCalendar.ts`: Core algorithm for Vietnamese lunar calendar calculation (based on Hồ Ngọc Đức's algorithm).
-    - `helper.ts`: Helper utilities for generating calendar grids and parsing dates.
+    - `LunarCalendar.ts`: Core algorithm for Vietnamese lunar calendar calculation.
+    - `helper.ts`: Helper utilities for calendar grids and date parsing.
     - `dailyQuotations.ts`: Utility for fetching daily quotes.
     - `ZodiacImages.ts`: Utility for exporting zodiac image assets.
+    - `googleAuth.ts`: Utility for handling Google OAuth2 authentication.
+    - `googleCalendar.ts`: Utility for interacting with the Google Calendar API.
 - `assets/`
   - Fonts, background images, and `daily_quotations.json`.
 

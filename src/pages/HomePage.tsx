@@ -8,11 +8,16 @@ import { useStorage } from "@plasmohq/storage/hook"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 
+import { EventFormModal } from "~components/EventFormModal"
+import { type PersonalEvent } from "~types/personalEvent"
+import { getCategories, type UserCategory } from "~utils/categories"
 import { getDailyQuote, type DailyQuotationType } from "~utils/dailyQuotations"
 import { authenticate } from "~utils/googleAuth"
 import { fetchEvents, type CalendarEvent } from "~utils/googleCalendar"
 import { dateFromString, getDatesForCalendar } from "~utils/helper"
 import LunarCalendar, { type FullInfoType } from "~utils/LunarCalendar"
+import { isEventOnSolarDate } from "~utils/lunarEventResolver"
+import { getAllEvents } from "~utils/personalEvents"
 import { ZodiacHorse } from "~utils/ZodiacImages"
 
 export const HomePage = () => {
@@ -39,6 +44,10 @@ export const HomePage = () => {
   const [goFastSolarError, setGoFastSolarError] = useState<string>("")
   const [convertSolarError, setConvertSolarError] = useState<string>("")
   const [convertLunarError, setConvertLunarError] = useState<string>("")
+  const [personalEvents, setPersonalEvents] = useState<PersonalEvent[]>([])
+  const [userCategories, setUserCategories] = useState<UserCategory[]>([])
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<PersonalEvent | null>(null)
   const isToday = (day: number, month: number, year: number) => {
     const dateNow = dayjs()
     return (
@@ -178,6 +187,21 @@ export const HomePage = () => {
     }
   }, [convertLunarInput])
 
+  const reloadPersonalEvents = async () => {
+    const events = await getAllEvents()
+    const cats = await getCategories()
+    setPersonalEvents(events)
+    setUserCategories(cats)
+  }
+
+  useEffect(() => {
+    reloadPersonalEvents()
+  }, [])
+
+  const getPersonalEventsForDate = (d: number, m: number, y: number): PersonalEvent[] => {
+    return personalEvents.filter(ev => isEventOnSolarDate(ev, d, m + 1, y))
+  }
+
   const [currentMonthEvents, setCurrentMonthEvents] = useState<CalendarEvent[]>([])
   const [token, setToken] = useState<string | null>(null);
 
@@ -196,7 +220,7 @@ export const HomePage = () => {
       // Fetch events from the start of the currently viewed month to the end
       const startOfMonth = dayjs(new Date(solarDate.year(), solarDate.month(), 1)).toISOString();
       const endOfMonth = dayjs(new Date(solarDate.year(), solarDate.month() + 1, 0)).endOf('day').toISOString();
-      
+
       const events = await fetchEvents(token, startOfMonth, endOfMonth);
       setCurrentMonthEvents(events);
     };
@@ -211,82 +235,83 @@ export const HomePage = () => {
   const getEventsForDate = (d: number, m: number, y: number) => {
     const targetDateStr = dayjs(new Date(y, m, d)).format("YYYY-MM-DD");
     return currentMonthEvents.filter(event => {
-       const startStr = event.start.dateTime || event.start.date;
-       if (!startStr) return false;
-       return startStr.startsWith(targetDateStr);
+      const startStr = event.start.dateTime || event.start.date;
+      if (!startStr) return false;
+      return startStr.startsWith(targetDateStr);
     });
   }
 
   return (
-    <div className="plasmo-flex plasmo-flex-row plasmo-gap-4 plasmo-p-4">
-      <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-2 plasmo-p-4">
-        <div className="plasmo-text-sm plasmo-font-bold plasmo-text-center">
-          Tháng {solarDate.month() + 1} Năm {solarDate.year()}
-        </div>
-        <div className="plasmo-flex">
-          <div className="plasmo-flex-1"></div>
-          <div className="plasmo-flex-1 plasmo-pr-4 plasmo-text-center plasmo-font-bold text-color-1 solar-date-number">
-            {solarDate.date()}
+    <>
+      <div className="plasmo-flex plasmo-flex-row plasmo-gap-4 plasmo-p-4">
+        <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-2 plasmo-p-4">
+          <div className="plasmo-text-sm plasmo-font-bold plasmo-text-center">
+            Tháng {solarDate.month() + 1} Năm {solarDate.year()}
           </div>
-          <div className="plasmo-flex-1">
-            <img src={ZodiacHorse} alt="" className="plasmo-w-full" />
-          </div>
-        </div>
-        <div>
-          <div className="plasmo-text-center plasmo-mb-1 plasmo-italic">
-            {quoteLang === "en" ? dailyQuote?.content_en : quoteLang === "cn" ? dailyQuote?.content_cn : dailyQuote?.content_vn}
-          </div>
-          <div className="plasmo-text-right plasmo-font-light">
-            <span>-&#9884;- </span>
-            {dailyQuote?.author}
-            <span> -&#9884;-</span>
-          </div>
-        </div>
-        <div className="plasmo-flex plasmo-flex-row">
-          <div className="plasmo-flex-1 plasmo-text-center">
-            <div className="plasmo-mb-1">
-              Tháng {lunarInfo?.lunar.monthName}
+          <div className="plasmo-flex">
+            <div className="plasmo-flex-1"></div>
+            <div className="plasmo-flex-1 plasmo-pr-4 plasmo-text-center plasmo-font-bold text-color-1 solar-date-number">
+              {solarDate.date()}
             </div>
-            <div className="plasmo-text-5xl plasmo-font-bold plasmo-mb-1">
-              {lunarInfo?.lunar.day}
+            <div className="plasmo-flex-1">
+              <img src={ZodiacHorse} alt="" className="plasmo-w-full" />
             </div>
-            <div className="">Năm {lunarInfo?.lunar.yearCanChi}</div>
           </div>
-          <div className="plasmo-flex-1 plasmo-text-center">
-            <div className="">Tháng {lunarInfo?.lunar.monthCanChi}</div>
-            <div className="">Ngày {lunarInfo?.lunar.dayCanChi}</div>
-            <div className="">
-              Giờ {lunarInfo?.hour.canChi}{" "}
-              <span className="font-size-11">({lunarInfo?.hour.type})</span>
+          <div>
+            <div className="plasmo-text-center plasmo-mb-1 plasmo-italic">
+              {quoteLang === "en" ? dailyQuote?.content_en : quoteLang === "cn" ? dailyQuote?.content_cn : dailyQuote?.content_vn}
             </div>
-            <div className="">Tiết {lunarInfo?.solarTerm.name}</div>
+            <div className="plasmo-text-right plasmo-font-light">
+              <span>-&#9884;- </span>
+              {dailyQuote?.author}
+              <span> -&#9884;-</span>
+            </div>
           </div>
-        </div>
-        <div>
-          <span className="plasmo-font-bold font-size-11">Giờ hoàng đạo: </span>
-          {lunarInfo?.hours
-            .filter((hour) => hour.isGood)
-            .map((hour) => hour.name + ` (${hour.canChi})`)
-            .join(", ")}
-        </div>
-        
-        <div className="plasmo-mt-4 plasmo-border-t border-color-1 plasmo-pt-4">
-          <div className="plasmo-flex plasmo-justify-between plasmo-items-center plasmo-mb-2">
-            <div className="plasmo-font-bold text-color-2">Sự kiện trong ngày</div>
-            {!token && (
-              <button 
-                onClick={handleLogin} 
-                className="plasmo-text-xs plasmo-bg-blue-500 plasmo-text-white plasmo-px-2 plasmo-py-1 plasmo-rounded hover:plasmo-bg-blue-600 plasmo-transition-colors">
-                Kết nối Google
-              </button>
-            )}
+          <div className="plasmo-flex plasmo-flex-row">
+            <div className="plasmo-flex-1 plasmo-text-center">
+              <div className="plasmo-mb-1">
+                Tháng {lunarInfo?.lunar.monthName}
+              </div>
+              <div className="plasmo-text-5xl plasmo-font-bold plasmo-mb-1">
+                {lunarInfo?.lunar.day}
+              </div>
+              <div className="">Năm {lunarInfo?.lunar.yearCanChi}</div>
+            </div>
+            <div className="plasmo-flex-1 plasmo-text-center">
+              <div className="">Tháng {lunarInfo?.lunar.monthCanChi}</div>
+              <div className="">Ngày {lunarInfo?.lunar.dayCanChi}</div>
+              <div className="">
+                Giờ {lunarInfo?.hour.canChi}{" "}
+                <span className="font-size-11">({lunarInfo?.hour.type})</span>
+              </div>
+              <div className="">Tiết {lunarInfo?.solarTerm.name}</div>
+            </div>
           </div>
-          <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
-            {getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
-               getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map(ev => {
+          <div>
+            <span className="plasmo-font-bold font-size-11">Giờ hoàng đạo: </span>
+            {lunarInfo?.hours
+              .filter((hour) => hour.isGood)
+              .map((hour) => hour.name + ` (${hour.canChi})`)
+              .join(", ")}
+          </div>
+
+          <div className="plasmo-mt-4 plasmo-border-t border-color-1 plasmo-pt-4">
+            <div className="plasmo-flex plasmo-justify-between plasmo-items-center plasmo-mb-2">
+              <div className="plasmo-font-bold text-color-2">Sự kiện trong ngày</div>
+              {!token && (
+                <button
+                  onClick={handleLogin}
+                  className="plasmo-text-xs plasmo-bg-blue-500 plasmo-text-white plasmo-px-2 plasmo-py-1 plasmo-rounded hover:plasmo-bg-blue-600 plasmo-transition-colors">
+                  Kết nối Google
+                </button>
+              )}
+            </div>
+            <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
+              {getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
+                getEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map(ev => {
                   let timeStr = "Cả ngày";
                   if (ev.start.dateTime && ev.end.dateTime) {
-                     timeStr = `${dayjs(ev.start.dateTime).format('HH:mm')} - ${dayjs(ev.end.dateTime).format('HH:mm')}`;
+                    timeStr = `${dayjs(ev.start.dateTime).format('HH:mm')} - ${dayjs(ev.end.dateTime).format('HH:mm')}`;
                   }
                   return (
                     <div key={ev.id} className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-border-l-4 plasmo-border-blue-500">
@@ -294,188 +319,246 @@ export const HomePage = () => {
                       <div className="plasmo-text-sm plasmo-font-semibold plasmo-truncate text-color-1" title={ev.summary}>{ev.summary}</div>
                     </div>
                   )
-               })
-            ) : (
-               <div className="plasmo-text-sm plasmo-italic text-color-3">Không có sự kiện nào.</div>
-            )}
+                })
+              ) : (
+                <div className="plasmo-text-sm plasmo-italic text-color-3">Không có sự kiện nào.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Ghi chú của tôi */}
+          <div className="plasmo-mt-4 plasmo-border-t border-color-1 plasmo-pt-4">
+            <div className="plasmo-flex plasmo-justify-between plasmo-items-center plasmo-mb-2">
+              <div className="plasmo-font-bold text-color-2">Ghi chú của tôi</div>
+              <button
+                onClick={() => { setEditingEvent(null); setShowEventModal(true) }}
+                className="plasmo-text-xs plasmo-bg-orange-500 plasmo-text-white plasmo-px-2 plasmo-py-1 plasmo-rounded hover:plasmo-bg-orange-600 plasmo-transition-colors">
+                + Thêm
+              </button>
+            </div>
+            <div className="plasmo-flex plasmo-flex-col plasmo-gap-2">
+              {getPersonalEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).length > 0 ? (
+                getPersonalEventsForDate(solarDate.date(), solarDate.month(), solarDate.year()).map((ev) => {
+                  const cat = userCategories.find(c => c.id === ev.category) || userCategories[0];
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={() => { setEditingEvent(ev); setShowEventModal(true) }}
+                      className="plasmo-bg-white plasmo-p-2 plasmo-rounded plasmo-shadow-sm plasmo-cursor-pointer hover:plasmo-shadow-md plasmo-transition-shadow"
+                      style={{ borderLeft: `4px solid ${cat?.color || '#f97316'}` }}>
+                      <div className="plasmo-text-xs plasmo-text-gray-500">
+                        {cat?.label || 'Chưa phân loại'}
+                        {ev.repeatType !== 'none' && <span className="plasmo-ml-1">🔁</span>}
+                        {ev.dateType === 'lunar' && <span className="plasmo-ml-1">🌙</span>}
+                      </div>
+                      <div className="plasmo-text-sm plasmo-font-semibold plasmo-truncate text-color-1" title={ev.title}>
+                        {ev.title}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="plasmo-text-sm plasmo-italic text-color-3">Chưa có ghi chú nào.</div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-4">
-        <div className="">
-          <div className="plasmo-flex plasmo-flex-row plasmo-pt-2 plasmo-pb-1">
-            <div className="plasmo-flex-1 plasmo-flex plasmo-flex-row plasmo-gap-2">
-              <ChevronDoubleLeftIcon
-                className="plasmo-size-6 plasmo-cursor-pointer"
-                onClick={onGoToPreviousMonth}
-              />
-              <ChevronLeftIcon
-                className="plasmo-size-6 plasmo-cursor-pointer"
-                onClick={onGoToPreviousDay}
-              />
+        <div className="plasmo-flex plasmo-flex-col plasmo-flex-1 plasmo-gap-4">
+          <div className="">
+            <div className="plasmo-flex plasmo-flex-row plasmo-pt-2 plasmo-pb-1">
+              <div className="plasmo-flex-1 plasmo-flex plasmo-flex-row plasmo-gap-2">
+                <ChevronDoubleLeftIcon
+                  className="plasmo-size-6 plasmo-cursor-pointer"
+                  onClick={onGoToPreviousMonth}
+                />
+                <ChevronLeftIcon
+                  className="plasmo-size-6 plasmo-cursor-pointer"
+                  onClick={onGoToPreviousDay}
+                />
+              </div>
+              <div
+                className="plasmo-flex-1 plasmo-font-bold plasmo-text-center plasmo-text-lg plasmo-cursor-pointer text-color-1"
+                onClick={onGoToToday}>
+                Hôm nay
+              </div>
+              <div className="plasmo-flex-1 plasmo-flex plasmo-flex-row plasmo-justify-end plasmo-gap-2">
+                <ChevronRightIcon
+                  className="plasmo-size-6 plasmo-cursor-pointer"
+                  onClick={onGoToNextDay}
+                />
+                <ChevronDoubleRightIcon
+                  className="plasmo-size-6 plasmo-cursor-pointer"
+                  onClick={onGoToNextMonth}
+                />
+              </div>
             </div>
-            <div
-              className="plasmo-flex-1 plasmo-font-bold plasmo-text-center plasmo-text-lg plasmo-cursor-pointer text-color-1"
-              onClick={onGoToToday}>
-              Hôm nay
-            </div>
-            <div className="plasmo-flex-1 plasmo-flex plasmo-flex-row plasmo-justify-end plasmo-gap-2">
-              <ChevronRightIcon
-                className="plasmo-size-6 plasmo-cursor-pointer"
-                onClick={onGoToNextDay}
-              />
-              <ChevronDoubleRightIcon
-                className="plasmo-size-6 plasmo-cursor-pointer"
-                onClick={onGoToNextMonth}
-              />
-            </div>
-          </div>
-          <table className="plasmo-border-collapse">
-            <thead className="bg-1">
-              <tr className="plasmo-font-bold plasmo-h-8">
-                <th className="plasmo-text-center text-color-2">T2</th>
-                <th className="plasmo-text-center text-color-2">T3</th>
-                <th className="plasmo-text-center text-color-2">T4</th>
-                <th className="plasmo-text-center text-color-2">T5</th>
-                <th className="plasmo-text-center text-color-2">T6</th>
-                <th className="plasmo-text-center text-color-2">T7</th>
-                <th className="plasmo-text-center text-color-2">CN</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from(
-                { length: Math.ceil(datesCalendar.length / 7) },
-                (_, weekIndex) => (
-                  <tr
-                    key={weekIndex}
-                    className="plasmo-border-b border-color-1">
-                    {datesCalendar
-                      .slice(weekIndex * 7, weekIndex * 7 + 7)
-                      .map((dateItem, index) => (
-                        <td
-                          key={index}
-                          className={getClassForDateCell(
-                            dateItem.day,
-                            dateItem.month,
-                            dateItem.year,
-                            index
-                          )}
-                          onClick={() => {
-                            onClickDate(
+            <table className="plasmo-border-collapse">
+              <thead className="bg-1">
+                <tr className="plasmo-font-bold plasmo-h-8">
+                  <th className="plasmo-text-center text-color-2">T2</th>
+                  <th className="plasmo-text-center text-color-2">T3</th>
+                  <th className="plasmo-text-center text-color-2">T4</th>
+                  <th className="plasmo-text-center text-color-2">T5</th>
+                  <th className="plasmo-text-center text-color-2">T6</th>
+                  <th className="plasmo-text-center text-color-2">T7</th>
+                  <th className="plasmo-text-center text-color-2">CN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from(
+                  { length: Math.ceil(datesCalendar.length / 7) },
+                  (_, weekIndex) => (
+                    <tr
+                      key={weekIndex}
+                      className="plasmo-border-b border-color-1">
+                      {datesCalendar
+                        .slice(weekIndex * 7, weekIndex * 7 + 7)
+                        .map((dateItem, index) => (
+                          <td
+                            key={index}
+                            className={getClassForDateCell(
                               dateItem.day,
                               dateItem.month,
-                              dateItem.year
-                            )
-                          }}>
-                          <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full plasmo-relative">
-                            <div className="plasmo-text-center">
-                              {dateItem.month != solarDate.month() ? (
-                                <span className="plasmo-text-gray-300">
-                                  {dateItem.day + `/${dateItem.month + 1}`}
-                                </span>
-                              ) : (
-                                dateItem.day
-                              )}
-                            </div>
-                            <div className="plasmo-flex plasmo-justify-between plasmo-items-end">
+                              dateItem.year,
+                              index
+                            )}
+                            onClick={() => {
+                              onClickDate(
+                                dateItem.day,
+                                dateItem.month,
+                                dateItem.year
+                              )
+                            }}>
+                            <div className="plasmo-flex plasmo-flex-col plasmo-justify-between plasmo-h-full plasmo-relative">
+                              <div className="plasmo-text-center">
+                                {dateItem.month != solarDate.month() ? (
+                                  <span className="plasmo-text-gray-300">
+                                    {dateItem.day + `/${dateItem.month + 1}`}
+                                  </span>
+                                ) : (
+                                  dateItem.day
+                                )}
+                              </div>
+                              <div className="plasmo-flex plasmo-justify-between plasmo-items-end">
                                 <div className="plasmo-flex plasmo-gap-1 plasmo-pl-1 plasmo-pb-0.5">
-                                    {getEventsForDate(dateItem.day, dateItem.month, dateItem.year).length > 0 && (
-                                        <div className="plasmo-w-1.5 plasmo-h-1.5 plasmo-rounded-full plasmo-bg-blue-500"></div>
-                                    )}
+                                  {getEventsForDate(dateItem.day, dateItem.month, dateItem.year).length > 0 && (
+                                    <div className="plasmo-w-1.5 plasmo-h-1.5 plasmo-rounded-full plasmo-bg-blue-500"></div>
+                                  )}
+                                  {getPersonalEventsForDate(dateItem.day, dateItem.month, dateItem.year).slice(0, 3).map((ev) => {
+                                    const cat = userCategories.find(c => c.id === ev.category) || userCategories[0];
+                                    return (
+                                      <div 
+                                        key={ev.id}
+                                        className="plasmo-w-1.5 plasmo-h-1.5 plasmo-rounded-full"
+                                        style={{ backgroundColor: cat?.color || '#f97316' }}
+                                      />
+                                    )
+                                  })}
                                 </div>
                                 <div className="plasmo-text-right text-color-3 font-size-11 plasmo-pt-1">
                                   {dateItem.lunarDay === 1
                                     ? dateItem.lunarDay + "/" + dateItem.lunarMonth
                                     : dateItem.lunarDay}
                                 </div>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                      ))}
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <div
-            className="text-color-2 plasmo-font-bold plasmo-cursor-pointer"
-            onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}>
-            Tính năng nâng cao
-            <span className="plasmo-text-lg">
-              {showAdvancedFeatures ? "▲" : "▼"}
-            </span>
+                          </td>
+                        ))}
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className={showAdvancedFeatures ? "" : "plasmo-hidden"}>
-            <div className="plasmo-mb-4">
-              <label className="plasmo-font-medium">
-                Chuyển đến ngày dương
-              </label>
-              <input
-                type="text"
-                id="go-fast-solar"
-                className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
-                placeholder="ngày/tháng/năm"
-                value={goFastSolarInput}
-                onChange={(e) => setGoFastSolarInput(e.target.value)}
-              />
-              {goFastSolarError && (
-                <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
-                  {goFastSolarError}
-                </div>
-              )}
+          <div>
+            <div
+              className="text-color-2 plasmo-font-bold plasmo-cursor-pointer"
+              onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}>
+              Tính năng nâng cao
+              <span className="plasmo-text-lg">
+                {showAdvancedFeatures ? "▲" : "▼"}
+              </span>
             </div>
-            <div className="plasmo-font-bold">Tra cứu ngày Âm - Dương</div>
-            <div className="plasmo-flex plasmo-gap-4">
-              <div className="plasmo-flex-1 plasmo-flex plasmo-flex-col">
-                <label htmlFor="solar-convert" className="plasmo-font-medium">
-                  Ngày dương
+            <div className={showAdvancedFeatures ? "" : "plasmo-hidden"}>
+              <div className="plasmo-mb-4">
+                <label className="plasmo-font-medium">
+                  Chuyển đến ngày dương
                 </label>
                 <input
                   type="text"
-                  id="solar-convert"
+                  id="go-fast-solar"
                   className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
                   placeholder="ngày/tháng/năm"
-                  value={convertSolarInput}
-                  onChange={(e) => setConvertSolarInput(e.target.value)}
+                  value={goFastSolarInput}
+                  onChange={(e) => setGoFastSolarInput(e.target.value)}
                 />
-                {convertSolarError ? (
+                {goFastSolarError && (
                   <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
-                    {convertSolarError}
-                  </div>
-                ) : (
-                  <div className="plasmo-text-red-600 plasmo-font-bold plasmo-mt-2">
-                    {convertSolarOutput}
+                    {goFastSolarError}
                   </div>
                 )}
               </div>
-              <div className="plasmo-flex-1 plasmo-flex plasmo-flex-col">
-                <label htmlFor="lunar-convert" className="plasmo-font-medium">
-                  Ngày âm
-                </label>
-                <input
-                  type="text"
-                  id="lunar-convert"
-                  className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
-                  placeholder="ngày/tháng/năm"
-                  value={convertLunarInput}
-                  onChange={(e) => setConvertLunarInput(e.target.value)}
-                />
-                {convertLunarError ? (
-                  <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
-                    {convertLunarError}
-                  </div>
-                ) : (
-                  <div className="plasmo-text-green-600 plasmo-font-bold plasmo-mt-2">
-                    {convertLunarOutput}
-                  </div>
-                )}
+              <div className="plasmo-font-bold">Tra cứu ngày Âm - Dương</div>
+              <div className="plasmo-flex plasmo-gap-4">
+                <div className="plasmo-flex-1 plasmo-flex plasmo-flex-col">
+                  <label htmlFor="solar-convert" className="plasmo-font-medium">
+                    Ngày dương
+                  </label>
+                  <input
+                    type="text"
+                    id="solar-convert"
+                    className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
+                    placeholder="ngày/tháng/năm"
+                    value={convertSolarInput}
+                    onChange={(e) => setConvertSolarInput(e.target.value)}
+                  />
+                  {convertSolarError ? (
+                    <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
+                      {convertSolarError}
+                    </div>
+                  ) : (
+                    <div className="plasmo-text-red-600 plasmo-font-bold plasmo-mt-2">
+                      {convertSolarOutput}
+                    </div>
+                  )}
+                </div>
+                <div className="plasmo-flex-1 plasmo-flex plasmo-flex-col">
+                  <label htmlFor="lunar-convert" className="plasmo-font-medium">
+                    Ngày âm
+                  </label>
+                  <input
+                    type="text"
+                    id="lunar-convert"
+                    className="plasmo-peer plasmo-mt-0.5 plasmo-w-full plasmo-rounded plasmo-border-gray-300 plasmo-shadow-sm plasmo-sm:text-sm plasmo-p-2 input-1"
+                    placeholder="ngày/tháng/năm"
+                    value={convertLunarInput}
+                    onChange={(e) => setConvertLunarInput(e.target.value)}
+                  />
+                  {convertLunarError ? (
+                    <div className="plasmo-text-red-500 plasmo-text-xs plasmo-mt-1">
+                      {convertLunarError}
+                    </div>
+                  ) : (
+                    <div className="plasmo-text-green-600 plasmo-font-bold plasmo-mt-2">
+                      {convertLunarOutput}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal thêm/sửa ghi chú */}
+      {showEventModal && (
+        <EventFormModal
+          solarDate={solarDate}
+          editingEvent={editingEvent}
+          onClose={() => { setShowEventModal(false); setEditingEvent(null) }}
+          onSaved={reloadPersonalEvents}
+        />
+      )}
+    </>
   )
 }

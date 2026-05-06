@@ -11,6 +11,8 @@ A Chrome extension built with Plasmo that provides a Vietnamese Lunar Calendar. 
 - **Detailed Day View**: Shows detailed information for the selected date, including Can Chi (day, month, year), Solar terms, and Zodiac hours.
 - **Daily Quotations**: Shows a daily quote based on the day of the year.
 - **Date Conversion**: Utilities to jump to a specific solar date or convert between solar and lunar dates.
+- **Google Calendar Integration**: Syncs personal Google Calendar events and displays them on the calendar grid.
+- **Content Script Widget**: A floating mini-calendar widget accessible on any webpage.
 - **Offline Capable**: Core algorithms and data are bundled with the extension.
 
 ## 4. Target Audience
