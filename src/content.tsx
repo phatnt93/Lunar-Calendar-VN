@@ -35,6 +35,9 @@ const PlasmoOverlay = () => {
   const [lunarInfo, setLunarInfo] = useState<FullInfoType | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   
+  // Cấu hình hiển thị widget
+  const [showWidget] = useStorage("showWidget", true)
+  
   // Lưu vị trí widget (mặc định cách góc dưới phải 16px)
   // Vị trí lưu trong storage
   const [pos, setPos] = useStorage("widget-pos", { bottom: 16, right: 16 })
@@ -121,6 +124,7 @@ const PlasmoOverlay = () => {
     }
   }, [isDragging, localPos])
 
+  if (!showWidget) return null
   if (!lunarInfo) return null
 
   return (

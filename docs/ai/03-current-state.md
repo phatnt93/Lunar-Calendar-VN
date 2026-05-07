@@ -13,13 +13,18 @@
 - **Options Page**: Allows configuring settings such as the Quote Language (VN, EN, CN) and connecting/disconnecting Google Calendar, synchronized via `@plasmohq/storage`.
 - **Content Script Widget**: Injects a floating mini-calendar widget into all web pages.
   - **Draggable & Persistent**: Users can drag the widget to any position on the screen. The position is saved via `@plasmohq/storage` and synced across all tabs.
-  - **Collapsed**: Displays solar date prominently with a small lunar date/month indicator.
-  - **Expanded**: Displays detailed current date info (Solar prominent, Lunar below).
+  - **Show/Hide Control**: Toggle setting in Options to enable or disable the widget globally.
+  - **Performance Optimized**: Uses local state during dragging to avoid storage quota errors.
+  - **Collapsed/Expanded States**: Supports both a mini-view and a detailed view.
 - **Google Calendar Integration**: 
   - Users can connect their personal Google Calendar via OAuth2 (`chrome.identity`).
   - Fetches events using the Google Calendar REST API.
   - Displays blue dots on the calendar grid for days with events.
   - Shows an "Sự kiện trong ngày" (Events of the day) list in the detailed info panel.
+- **Cloud Data Sync**:
+  - Syncs personal notes/events across devices using **Google Drive App Data Folder**.
+  - Merges local and cloud data based on `updatedAt` timestamps.
+  - Automatic silent sync on application startup and after modifications.
 - **Holidays & Events**: 
   - Comprehensive holiday list in `holidays.json` (Solar & Lunar).
   - Countdown logic to show "Sắp tới" (Upcoming) events on the dashboard.

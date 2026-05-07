@@ -14,6 +14,7 @@ function OptionsIndex() {
     1
   )
   const [notifyTime, setNotifyTime] = useStorage("notifyTime", "08:00")
+  const [showWidget, setShowWidget] = useStorage("showWidget", true)
   const [token, setToken] = useState<string | null>(null)
   const [importStatus, setImportStatus] = useState<string>("")
 
@@ -183,6 +184,16 @@ function OptionsIndex() {
                   Hệ thống sẽ kiểm tra và gửi thông báo vào khung giờ này mỗi
                   ngày.
                 </p>
+              </div>
+
+              <div className="plasmo-flex plasmo-items-center plasmo-justify-between plasmo-pt-2">
+                <label className="plasmo-text-sm plasmo-text-gray-600">Hiển thị lịch thu nhỏ (Widget) trên web</label>
+                <input 
+                  type="checkbox" 
+                  checked={showWidget}
+                  onChange={(e) => setShowWidget(e.target.checked)}
+                  className="plasmo-w-5 plasmo-h-5 plasmo-accent-[#c01800] plasmo-cursor-pointer"
+                />
               </div>
             </div>
           </div>
