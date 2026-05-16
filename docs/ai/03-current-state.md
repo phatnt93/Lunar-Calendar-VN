@@ -16,6 +16,10 @@
   - **Show/Hide Control**: Toggle setting in Options to enable or disable the widget globally.
   - **Performance Optimized**: Uses local state during dragging to avoid storage quota errors.
   - **Collapsed/Expanded States**: Supports both a mini-view and a detailed view.
+- **Startup Quote Toast**:
+  - Displays a beautifully styled daily quote on the top right corner of the screen when the browser is first opened.
+  - Automatically disappears after 10 seconds or when clicked.
+  - Utilizes `chrome.storage.session` to ensure it only shows once per browser session.
 - **Google Calendar Integration**: 
   - Users can connect their personal Google Calendar via OAuth2 (`chrome.identity`).
   - Fetches events using the Google Calendar REST API.

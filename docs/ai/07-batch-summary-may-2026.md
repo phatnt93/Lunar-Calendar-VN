@@ -44,6 +44,12 @@
 - **Show/Hide Toggle**: Thêm công tắc bật/tắt hiển thị widget trong trang Options.
 - **Boundary Detection**: Thêm logic giới hạn tọa độ để widget luôn nằm trong khung hình (viewport).
 
+### 2.7. Startup Quote Toast
+
+- **Session-based Display**: Hiển thị một câu châm ngôn (Quote) ở góc trên bên phải màn hình khi trình duyệt vừa khởi động. Sử dụng `chrome.storage.session` để đảm bảo chỉ hiển thị 1 lần duy nhất trong suốt phiên làm việc của trình duyệt.
+- **UI/UX**: Giao diện Glassmorphism mượt mà (backdrop-blur), tự động biến mất sau 10 giây hoặc khi người dùng click vào.
+- **Daily Content**: Tái sử dụng dữ liệu từ `daily_quotations.json` và cấu hình ngôn ngữ của người dùng.
+
 ## 3. Decisions & Trade-offs
 
 - **Zodiac Images**: Tạm dừng triển khai bộ 12 con giáp động theo yêu cầu của người dùng.

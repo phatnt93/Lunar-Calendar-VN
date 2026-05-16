@@ -79,3 +79,22 @@ async function checkAndNotify() {
     await storage.set("lastNotifyDate", todayStr)
   }
 }
+
+/**
+ * Lắng nghe message từ content script để hiển thị Quote khi khởi động trình duyệt
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "CHECK_STARTUP_QUOTE") {
+    // Sử dụng chrome.storage.session để lưu trạng thái phiên làm việc hiện tại
+    chrome.storage.session.get("hasShownStartupQuote").then((data) => {
+      if (!data.hasShownStartupQuote) {
+        chrome.storage.session.set({ hasShownStartupQuote: true }).then(() => {
+          sendResponse({ showQuote: true })
+        })
+      } else {
+        sendResponse({ showQuote: false })
+      }
+    })
+    return true // Trả về true để chỉ định rằng phản hồi sẽ được gửi bất đồng bộ (async)
+  }
+})

@@ -5,6 +5,7 @@ import type { PlasmoCSConfig } from "plasmo"
 import { useEffect, useState, useRef } from "react"
 
 import LunarCalendar, { type FullInfoType } from "~utils/LunarCalendar"
+import { getDailyQuote, type DailyQuotationType } from "~utils/dailyQuotations"
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"]
@@ -35,6 +36,11 @@ const PlasmoOverlay = () => {
   const [lunarInfo, setLunarInfo] = useState<FullInfoType | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   
+  // Trạng thái cho Quote khi khởi động
+  const [showStartupQuote, setShowStartupQuote] = useState(false)
+  const [quoteData, setQuoteData] = useState<DailyQuotationType | null>(null)
+  const [quoteLanguage] = useStorage("quoteLanguage", "vn")
+  
   // Cấu hình hiển thị widget
   const [showWidget] = useStorage("showWidget", true)
   
@@ -64,6 +70,20 @@ const PlasmoOverlay = () => {
       today.year()
     )
     setLunarInfo(lc)
+
+    // Lấy Quote hàng ngày
+    setQuoteData(getDailyQuote(today))
+
+    // Kiểm tra hiển thị Quote khi khởi động
+    chrome.runtime.sendMessage({ action: "CHECK_STARTUP_QUOTE" }, (response) => {
+      if (response && response.showQuote) {
+        setShowStartupQuote(true)
+        // Tự động ẩn sau 10 giây
+        setTimeout(() => {
+          setShowStartupQuote(false)
+        }, 10000)
+      }
+    })
   }, [])
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -128,8 +148,39 @@ const PlasmoOverlay = () => {
   if (!lunarInfo) return null
 
   return (
-    <div 
-      className="plasmo-fixed plasmo-z-[9999]"
+    <>
+      {/* Startup Quote Toast */}
+      {showStartupQuote && quoteData && (
+        <div 
+          className="plasmo-fixed plasmo-top-6 plasmo-right-6 plasmo-z-[99999] animate-slide-in hover-lift"
+          onClick={() => setShowStartupQuote(false)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="plasmo-bg-[#ffe6ad] plasmo-border-2 plasmo-border-[#d4b48a] plasmo-rounded-xl plasmo-p-4 plasmo-shadow-2xl plasmo-w-80 plasmo-backdrop-blur-sm plasmo-bg-opacity-95">
+            <div className="plasmo-flex plasmo-justify-between plasmo-items-start plasmo-mb-2">
+              <span className="plasmo-text-xs plasmo-font-bold text-color-1 plasmo-uppercase plasmo-tracking-wider">Châm ngôn hôm nay</span>
+              <button
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setShowStartupQuote(false) 
+                }}
+                className="plasmo-text-gray-500 hover:plasmo-text-gray-800 plasmo-font-bold plasmo-leading-none">
+                ✕
+              </button>
+            </div>
+            <div className="plasmo-text-sm plasmo-text-gray-800 plasmo-italic plasmo-mb-2 plasmo-leading-relaxed">
+              "{quoteLanguage === 'en' ? quoteData.content_en : quoteLanguage === 'cn' ? quoteData.content_cn : quoteData.content_vn}"
+            </div>
+            <div className="plasmo-text-xs plasmo-font-semibold plasmo-text-right text-color-2">
+              - {quoteData.author} -
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWidget && (
+        <div 
+          className="plasmo-fixed plasmo-z-[9999]"
       style={{ 
         bottom: `${localPos.bottom}px`, 
         right: `${localPos.right}px`,
@@ -191,9 +242,11 @@ const PlasmoOverlay = () => {
               {lunarInfo.lunar?.day}/{lunarInfo.lunar?.month} ÂL
             </span>
           </div>
-        </button>
+          </button>
+        )}
+      </div>
       )}
-    </div>
+    </>
   )
 }
 
