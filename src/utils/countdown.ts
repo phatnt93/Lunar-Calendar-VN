@@ -1,8 +1,6 @@
 import dayjs from "dayjs"
-import LunarCalendar from "./LunarCalendar"
 import { isEventOnSolarDate } from "./lunarEventResolver"
 import type { PersonalEvent } from "~types/personalEvent"
-import holidays from "../assets/holidays.json"
 
 export type CountdownItem = {
   name: string
@@ -22,38 +20,7 @@ export const getUpcomingEvents = async (
   const today = dayjs().startOf("day")
   const results: CountdownItem[] = []
 
-  // 1. Xử lý Ngày lễ (Holidays)
-  for (const h of holidays) {
-    let nextSolar: dayjs.Dayjs
-    if (h.type === "lunar") {
-      // Tìm ngày dương tương ứng trong năm nay
-      const solarThisYear = LunarCalendar.convertLunar2Solar(h.day, h.month, today.year())
-      let date = dayjs(`${solarThisYear.year}-${solarThisYear.month}-${solarThisYear.day}`)
-      
-      // Nếu đã qua rồi, tìm năm sau
-      if (date.isBefore(today)) {
-        const solarNextYear = LunarCalendar.convertLunar2Solar(h.day, h.month, today.year() + 1)
-        date = dayjs(`${solarNextYear.year}-${solarNextYear.month}-${solarNextYear.day}`)
-      }
-      nextSolar = date
-    } else {
-      let date = dayjs(`${today.year()}-${h.month}-${h.day}`)
-      if (date.isBefore(today)) {
-        date = date.add(1, "year")
-      }
-      nextSolar = date
-    }
-
-    results.push({
-      name: h.name,
-      date: nextSolar.format("YYYY-MM-DD"),
-      daysLeft: nextSolar.diff(today, "day"),
-      type: "holiday",
-      isLunar: h.type === "lunar"
-    })
-  }
-
-  // 2. Xử lý Sự kiện Cá nhân (Personal Events)
+  // Xử lý Sự kiện Cá nhân (Personal Events)
   // Chỉ lấy các sự kiện lặp lại hoặc sự kiện đơn lẻ trong tương lai
   for (const ev of personalEvents) {
     let nextSolar: dayjs.Dayjs | null = null

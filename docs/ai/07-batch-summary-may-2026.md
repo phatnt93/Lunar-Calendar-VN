@@ -58,4 +58,3 @@
 ## 4. Next Steps
 
 - Tối ưu hóa hiệu năng render cho danh sách sự kiện dài.
-- Xem xét tính năng đồng bộ qua các dịch vụ Cloud khác (OneDrive/Dropbox).

@@ -16,3 +16,9 @@
 ## 4. Documentation
 - Update these AI docs if structural or architectural changes are introduced.
 - Mark uncertain implementation details or missing assets as `[NEED CONFIRMATION]`.
+
+## 5. CodeGraph-First Workflow
+- Before performing any task related to source code, read the relevant CodeGraph context first.
+- Use CodeGraph for structural understanding: entry points, symbol definitions, callers/callees, impact analysis, and cross-file dependencies.
+- Use native text search only for literal strings, comments, assets, or after CodeGraph has identified the specific files to inspect.
+- For architecture, bug context, or feature work, start with `codegraph_context`, then use `codegraph_explore` for the focused symbols/files it surfaces.
